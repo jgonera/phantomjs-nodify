@@ -38,7 +38,6 @@ var global = window, process;
   
   // TODO: remove when PhantomJS has full module support
   function patchRequire() {
-    phantom.injectJs(joinPath(nodifyPath, 'coffee-script.js'));
     var phantomRequire = nodify.__orig__require = require;
     var requireDir = rootPath;
     var requireCache = {};
@@ -250,6 +249,11 @@ var global = window, process;
       console.error(getErrorMessage(e));
       phantom.exit(1);
     }
+  };
+
+  nodify.enable_coffee_script = function() {
+    phantom.injectJs(joinPath(nodifyPath, 'coffee-script.js'));
+    nodify._user_coffee = true;
   };
   
 }());
