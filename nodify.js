@@ -42,7 +42,7 @@ var global = window, process;
     var requireDir = rootPath;
     
     require = function(path) {
-      var i, dir, paths = [], fileGuesses = [], file, code, fn;
+      var i, dir, file, code, fn;
       var fileGuesses = []
       var paths = global.module['paths'].slice(0);
       var oldRequireDir = requireDir;
