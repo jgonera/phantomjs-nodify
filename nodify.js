@@ -38,13 +38,13 @@ var global = window, process;
   
   // TODO: remove when PhantomJS has full module support
   function patchRequire() {
-    phantom.injectJs(joinPath(nodifyPath, 'coffee-script.js'));
     var phantomRequire = nodify.__orig__require = require;
     var requireDir = rootPath;
-    var requireCache = {};
     
     require = function(path) {
-      var i, dir, paths = [], fileGuesses = [], file, code, fn;
+      var i, dir, file, code, fn;
+      var fileGuesses = []
+      var paths = global.module['paths'].slice(0);
       var oldRequireDir = requireDir;
       var module = { exports: {} };
 
@@ -56,24 +56,30 @@ var global = window, process;
         } else if (path[0] === '/') {
           paths.push(fs.absolute(path));
         } else {
-          dir = requireDir;
-          while (dir !== '') {
-            paths.push(joinPath(dir, 'node_modules', path));
-            dir = dirname(dir);
-          }
+          // Look in default modules path.
           paths.push(joinPath(nodifyPath, 'modules', path));
         }
         
         for (i = 0; i < paths.length; ++i) {
-          fileGuesses.push.apply(fileGuesses, [
-            paths[i],
-            paths[i] + '.js',
-            paths[i] + '.coffee',
-            joinPath(paths[i], 'index.js'),
-            joinPath(paths[i], 'index.coffee'),
-            joinPath(paths[i], 'lib', basename(paths[i]) + '.js'),
-            joinPath(paths[i], 'lib', basename(paths[i]) + '.coffee')
-          ]);
+          guess_path = paths[i]
+          var files = [
+            guess_path,
+            guess_path + '.js',
+            joinPath(guess_path, path),
+            joinPath(guess_path, path + '.js'),
+            joinPath(guess_path, 'index.js'),
+            joinPath(guess_path, 'lib', basename(guess_path) + '.js')
+          ]
+
+          if (nodify._user_coffee) {
+            files.push.apply(files, [
+              paths[i] + '.coffee',
+              joinPath(paths[i], 'index.coffee'),
+              joinPath(paths[i], 'lib', basename(paths[i]) + '.coffee')
+              ]);
+          }
+
+          fileGuesses.push.apply(fileGuesses, files);
         };
         
         file = null;
@@ -83,11 +89,18 @@ var global = window, process;
           }
         };
         if (!file) {
-          throw new Error("Can't find module " + path);
+          throw new Error(
+            "\nCan't find module " + path + " in:\n" +
+            fileGuesses.join('\n') +
+            "\n\nGlobal paths:\n" +
+            global.module['paths'].join('\n') +
+            "\n\nExtended paths:\n" +
+            paths.join('\n')
+            );
         }
         
-        if (file in requireCache) {
-          return requireCache[file].exports;
+        if (file in global.module.cache) {
+          return global.module.cache[file].exports;
         }
 
         requireDir = dirname(file);
@@ -117,7 +130,7 @@ var global = window, process;
         }
         
         requireDir = oldRequireDir;
-        requireCache[file] = module;
+        global.module.cache[file] = module;
         
         return module.exports;
       }
@@ -142,6 +155,11 @@ var global = window, process;
     };
     process.argv = ['nodify', phantom.scriptName].concat(phantom.args);
     
+    process.cwd = function() { return fs.workingDirectory;};
+
+    process.version = '0.0.0'
+    process.versions = {'node': process.version}
+
     var phantomSetTimeout = nodify.__orig__setTimeout = setTimeout;
     setTimeout = function(fn, delay) {
       return phantomSetTimeout(function() {
@@ -227,21 +245,27 @@ var global = window, process;
   };
   
   // dummy Buffer
-  function addBuffer() {
+  function patchGlobal() {
     global.Buffer = {
       isBuffer: function() { return false; }
     };
+
+    global.__dirname = fs.workingDirectory;
+
+    global.module = {
+      'paths': [],
+      'cache': {}
+    }
   };
 
   // nodify
-  
+  patchGlobal();  
   patchRequire();
   addProcess();
   patchEvents();
   patchConsole();
   addErrorStack();
   addFunctionBind();
-  addBuffer();
   
   nodify.run = function(fn) {
     try {
@@ -250,6 +274,11 @@ var global = window, process;
       console.error(getErrorMessage(e));
       phantom.exit(1);
     }
+  };
+
+  nodify.enable_coffee_script = function() {
+    phantom.injectJs(joinPath(nodifyPath, 'coffee-script.js'));
+    nodify._user_coffee = true;
   };
   
 }());
