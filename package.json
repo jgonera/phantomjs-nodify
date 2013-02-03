@@ -1,0 +1,8 @@
+{
+  "name": "phantomjs-nodify",
+  "version": "0.1.0dev",
+  "description": "Makes PhantomJS more compatible with Node.js",
+  "main": "./lib/nodify.js",
+  "engines" : { "phantomjs" : ">=1.7" },
+  "engineStrict": true
+}
