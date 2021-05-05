@@ -22,7 +22,7 @@ Implemented features:
 * Other minor tweaks.
 
 Some code taken from [Node.js](http://nodejs.org/).
-Uses [Mocha](http://visionmedia.github.com/mocha/) + [Chai](http://chaijs.com/)
+Uses [Mocha](https://mochajs.org/) + [Chai](http://chaijs.com/)
 for testing.
 
 
